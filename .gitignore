@@ -1,4 +1,4 @@
 /target
-example.json
+config.json
 .direnv
 .pre-commit-config.yml

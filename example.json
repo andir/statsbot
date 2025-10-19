@@ -1,0 +1,13 @@
+{
+    "irc": {
+	"owners": ["andi-"],
+	"nickname": "statsbot",
+	"use_tls": true,
+	"server": "<replace-me>",
+	"port": 6697,
+	"dangerously_accept_invalid_certs": false
+    },
+    "oper_name": "<name>",
+    "oper_password": "<password>",
+    "servers": ["<server1>", "<server2>"]
+}
