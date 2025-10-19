@@ -1,0 +1,20 @@
+commit b0936342d58b4521d03fdca6d8926fb758551f49
+Author: Andreas Rammhold <andreas@rammhold.de>
+Date:   Tue Oct 14 17:04:53 2025 +0200
+
+    Fix this shit
+
+diff --git a/crates/project-model/src/sysroot.rs b/crates/project-model/src/sysroot.rs
+index c0a5009afb..233be33b58 100644
+--- a/crates/project-model/src/sysroot.rs
++++ b/crates/project-model/src/sysroot.rs
+@@ -224,7 +224,8 @@ impl Sysroot {
+             if fs::metadata(&library_manifest).is_ok() {
+                 match self.load_library_via_cargo(
+                     &library_manifest,
+-                    current_dir,
++                    //                    current_dir,
++                    &library_manifest.parent(),
+                     target_dir,
+                     cargo_config,
+                     no_deps,

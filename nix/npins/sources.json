@@ -1,0 +1,24 @@
+{
+  "pins": {
+    "nixpkgs": {
+      "type": "Channel",
+      "name": "nixpkgs-unstable",
+      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre879700.36226520e9f7/nixexprs.tar.xz",
+      "hash": "sha256-p66Sh7S87h/8T8cpSN6kW0ng+dp70X1tFZVahoCcYs0="
+    },
+    "pre-commit-hooks.nix": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "cachix",
+        "repo": "pre-commit-hooks.nix"
+      },
+      "branch": "master",
+      "submodules": false,
+      "revision": "ca5b894d3e3e151ffc1db040b6ce4dcc75d31c37",
+      "url": "https://github.com/cachix/pre-commit-hooks.nix/archive/ca5b894d3e3e151ffc1db040b6ce4dcc75d31c37.tar.gz",
+      "hash": "sha256-BflA6U4AM1bzuRMR8QqzPXqh8sWVCNDzOdsxXEguJIc="
+    }
+  },
+  "version": 7
+}

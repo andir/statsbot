@@ -1,0 +1,109 @@
+[package]
+name = "irc"
+version = "1.1.0"
+authors = ["Ariel Weiss <aweiss@hey.com>"]
+edition = "2018"
+rust-version = "1.71"
+description = "the irc crate – usable, async IRC for Rust"
+documentation = "https://docs.rs/irc/"
+readme = "README.md"
+repository = "https://github.com/aatxe/irc"
+license = "MPL-2.0"
+keywords = ["irc", "client", "thread-safe", "async", "tokio"]
+categories = ["asynchronous", "network-programming"]
+
+
+[badges]
+travis-ci = { repository = "aatxe/irc" }
+is-it-maintained-issue-resolution = { repository = "aatxe/irc" }
+is-it-maintained-open-issues = { repository = "aatxe/irc" }
+
+
+[workspace]
+members = ["./", "irc-proto/"]
+
+
+[features]
+default = ["ctcp", "tls-native", "channel-lists", "toml_config", "encoding"]
+ctcp = []
+channel-lists = []
+
+json_config = ["serde", "serde_json"]
+toml_config = ["serde", "toml"]
+yaml_config = ["serde", "serde_yaml"]
+# Temporary transitionary features
+json = ["json_config"]
+yaml = ["yaml_config"]
+
+proxy = ["tokio-socks"]
+
+tls-native = ["native-tls", "tokio-native-tls"]
+tls-rust = [
+    "rustls-native-certs",
+    "rustls-pemfile",
+    "tokio-rustls",
+    "webpki-roots",
+]
+encoding = ["dep:encoding", "irc-proto/encoding"]
+
+[dependencies]
+chrono = { version = "0.4.24", default-features = false, features = [
+    "clock",
+    "std",
+] }
+encoding = { version = "0.2.33", optional = true }
+futures-util = { version = "0.3.30", default-features = false, features = [
+    "alloc",
+    "sink",
+] }
+irc-proto = { version = "1.0.0", path = "irc-proto" }
+log = "0.4.21"
+parking_lot = "0.12.1"
+thiserror = "1.0.58"
+pin-project = "1.0.12"
+tokio = { version = "1.27.0", features = ["net", "time", "sync"] }
+tokio-stream = "0.1.12"
+tokio-util = { version = "0.7.7", features = ["codec"] }
+
+# Feature - Config
+serde = { version = "1.0.160", features = ["derive"], optional = true }
+serde_json = { version = "1.0.95", optional = true }
+serde_yaml = { version = "0.9.21", optional = true }
+toml = { version = "0.7.3", optional = true }
+
+# Feature - Proxy
+tokio-socks = { version = "0.5.1", optional = true }
+
+# Feature - TLS
+native-tls = { version = "0.2.11", optional = true }
+tokio-native-tls = { version = "0.3.1", optional = true }
+rustls-native-certs = { version = "0.8", optional = true }
+rustls-pemfile = { version = "2", optional = true }
+tokio-rustls = { version = "0.26.0", optional = true }
+webpki-roots = { version = "0.26.0", optional = true }
+
+
+[dev-dependencies]
+anyhow = "1.0.81"
+args = "2.2.0"
+env_logger = "0.11.0"
+futures = "0.3.30"
+getopts = "0.2.21"
+tokio = { version = "1.27.0", features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+] }
+
+
+[[example]]
+name = "simple_proxy"
+path = "examples/simple_proxy.rs"
+required-features = ["proxy"]
+
+[[example]]
+name = "simple_plaintext"
+path = "examples/simple_plaintext.rs"
+required-features = ["tls-native"]

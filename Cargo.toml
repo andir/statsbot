@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+members = ["statsbot", "parser"]
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "signal", "fs", "io-util"] }
+irc = { version = "1", default-features = false, features = ["tls-rust", "serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = { version = "2" }
+parser = { path = "./parser" }
+
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+arithmetic_side_effects = "deny"
+needless_lifetimes = "deny"
+

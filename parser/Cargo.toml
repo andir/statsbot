@@ -1,0 +1,13 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nom-language = "0.1"
+nom = { version = "8" }
+serde = { workspace = true }
+
+
+[lints]
+workspace = true
