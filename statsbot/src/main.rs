@@ -1,5 +1,5 @@
 use clap::{Args, Parser as ClapParser, Subcommand};
-use futures::StreamExt;
+use futures::{StreamExt, stream::FusedStream};
 use irc::{client::prelude::Config as IrcConfig, proto::Command, proto::Message};
 use serde::Deserialize;
 use thiserror::Error as ThisError;
@@ -116,8 +116,121 @@ enum State {
     Idle { next: Option<usize> },
     WaitingForData { lines: Vec<String>, server: usize },
 }
+
+async fn message_handler(
+    client: &mut irc::client::Client,
+    config: &Configuration,
+    state: &mut State,
+    message: Message,
+) -> Result<(), Error> {
+    match message.command {
+        Command::Response(irc::proto::Response::RPL_ENDOFMOTD, _) => {
+            if let (Some(user), Some(password)) =
+                (config.oper_name.clone(), config.oper_password.clone())
+            {
+                log::info!("Sending oper command: {} {}", user, password);
+                client.send_oper(user, password)?;
+            }
+            *state = State::Idle { next: None };
+        }
+        Command::Response(irc::proto::Response::RPL_ENDOFSTATS, _) => {
+            if let State::WaitingForData { lines, server } = state {
+                let (lines, server) = (lines.clone(), *server);
+                *state = State::Idle {
+                    next: server
+                        .checked_add(1)
+                        .map(|v| if v >= config.servers.len() { 0 } else { v }),
+                };
+                let line = lines.join("\n");
+                let parsed_stats = parser::parse_stats_z(&line);
+                let Some(server_name) = config.servers.get(server) else {
+                    log::error!("Server name for {} gone missing?!", server);
+                    return Ok(());
+                };
+                if let Ok(parsed_stats) = parsed_stats {
+                    log::info!("parsed: {}: {:?}", server_name, parsed_stats);
+                    use simple_prometheus::SimplePrometheus;
+                    log::info!(
+                        "prometheus metrics: {}",
+                        parsed_stats
+                            .to_prometheus_metrics(config.servers.get(server).cloned())
+                            .unwrap_or("".into())
+                    );
+                }
+            }
+        }
+        ref c @ Command::Raw(ref code, ref parts) if code == "249" => match state {
+            State::WaitingForData { lines, .. } => {
+                if parts.len() < 3 {
+                    log::warn!(
+                        "/stats z line doesn't contain at least three components (<nick> z <data>): {:?}",
+                        parts
+                    );
+                } else {
+                    lines.push(parts[2..].join(" "));
+                }
+            }
+            _ => {
+                log::warn!("Received /stats z data while not expecting it: {:?}", c);
+            }
+        },
+        _ => {}
+    }
+    Ok(())
+}
+
+#[derive(Default)]
+struct TickHandler {
+    stuck_counter: usize,
+}
+impl TickHandler {
+    async fn handle_tick(
+        &mut self,
+        client: &mut irc::client::Client,
+        state: &mut State,
+        config: &Configuration,
+    ) -> Result<(), Error> {
+        match state {
+            State::Idle { next } => {
+                let server_n = next.unwrap_or(0);
+                let server = config.servers.get(server_n).cloned();
+                let command = Command::STATS(Some("z".to_owned()), server);
+                log::info!("Sending: {:?}", command);
+                self.stuck_counter = 0;
+                client.send(Message {
+                    command,
+                    tags: None,
+                    prefix: None,
+                })?;
+                *state = State::WaitingForData {
+                    lines: vec![],
+                    server: server_n,
+                };
+            }
+            State::WaitingForData { server, .. } => {
+                self.stuck_counter = self.stuck_counter.checked_add(1).unwrap_or(0);
+                log::warn!("Last /stats z seems to be running late?!");
+                if self.stuck_counter >= 3 {
+                    log::warn!(
+                        "Was stuck processing server {:?}, moving on to next.",
+                        config.servers.get(*server)
+                    );
+                    // Skip the current server and go to next.
+                    *state = State::Idle {
+                        next: server
+                            .checked_add(1)
+                            .map(|v| if v >= config.servers.len() { 0 } else { v }),
+                    };
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
 async fn run(config: Configuration) -> Result<(), Error> {
-    let mut client = irc::client::Client::from_config(config.irc).await?;
+    let mut client = irc::client::Client::from_config(config.irc.clone()).await?;
     log::info!("Connected");
     client.identify()?;
 
@@ -125,103 +238,15 @@ async fn run(config: Configuration) -> Result<(), Error> {
 
     let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
 
-    let mut state = State::Idle { next: None };
-    let msg_handler = async |state: &mut State, message: Message| -> Result<(), Error> {
-        match message.command {
-            Command::Response(irc::proto::Response::RPL_ENDOFMOTD, _) => {
-                if let (Some(user), Some(password)) =
-                    (config.oper_name.clone(), config.oper_password.clone())
-                {
-                    log::info!("Sending oper command: {} {}", user, password);
-                    client.send_oper(user, password)?;
-                }
-                *state = State::Idle { next: None };
-            }
-            Command::Response(irc::proto::Response::RPL_ENDOFSTATS, _) => {
-                if let State::WaitingForData { lines, server } = state {
-                    let (lines, server) = (lines.clone(), *server);
-                    *state = State::Idle {
-                        next: server
-                            .checked_add(1)
-                            .map(|v| if v >= config.servers.len() { 0 } else { v }),
-                    };
-                    let line = lines.join("\n");
-                    let parsed_stats = parser::parse_stats_z(&line);
-                    let Some(server_name) = config.servers.get(server) else {
-                        log::error!("Server name for {} gone missing?!", server);
-                        return Ok(());
-                    };
-                    if let Ok(parsed_stats) = parsed_stats {
-                        log::info!("parsed: {}: {:?}", server_name, parsed_stats);
-                        use simple_prometheus::SimplePrometheus;
-                        log::info!(
-                            "prometheus metrics: {}",
-                            parsed_stats
-                                .to_prometheus_metrics(config.servers.get(server).cloned())
-                                .unwrap_or("".into())
-                        );
-                    }
-                }
-            }
-            ref c @ Command::Raw(ref code, ref parts) if code == "249" => match state {
-                State::WaitingForData { lines, .. } => {
-                    if parts.len() < 3 {
-                        log::warn!(
-                            "/stats z line doesn't contain at least three components (<nick> z <data>): {:?}",
-                            parts
-                        );
-                    } else {
-                        lines.push(parts[2..].join(" "));
-                    }
-                }
-                _ => {
-                    log::warn!("Received /stats z data while not expecting it: {:?}", c);
-                }
-            },
-            _ => {}
-        }
-        Ok(())
-    };
-
-    let mut stuck_counter: usize = 0;
+    let mut state = State::NotConnected;
+    let mut tick_handler = TickHandler::default();
     loop {
-        #[rustfmt::skip]
         tokio::select! {
-            Some(Ok(message)) = s.next() => {
-		msg_handler(&mut state, message).await?;
-            }
-            _ = timer.tick() => {
-		match state {
-		    State::Idle { next } => {
-			    let server_n = next.unwrap_or(0);
-			    let server = config.servers.get(server_n).cloned();
-			    let command = Command::STATS(Some("z".to_owned()), server);
-			    log::info!("Sending: {:?}", command);
-			    stuck_counter = 0;
-			    client.send(Message {
-				command,
-				tags: None,
-				prefix: None,
-			    })?;
-			    state = State::WaitingForData {
-				lines: vec![],
-				server: server_n,
-			    }
-		    }
-		    State::WaitingForData { server, .. } => {
-			stuck_counter = stuck_counter.checked_add(1).unwrap_or(0);
-			log::warn!("Last /stats z seems to be running late?!");
-			if stuck_counter > 3 {
-			    log::warn!("Was stuck processing server {:?}, moving on to next.", config.servers.get(server));
-			    // Skip the current server and go to next.
-			    state = State::Idle {
-				next: server.checked_add(1).map(|v|  if v >= config.servers.len() { 0 } else { v }),
-			    };
-			}
-		    }
-		    _ => {}
-		}
-	    }
+            Some(Ok(message)) = s.next() => message_handler(&mut client, &config, &mut state, message).await?,
+            _ = timer.tick() => tick_handler.handle_tick(&mut client, &mut state, &config).await?,
+        }
+        if s.is_terminated() {
+            break;
         }
     }
 

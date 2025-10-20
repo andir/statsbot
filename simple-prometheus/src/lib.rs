@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 pub use simple_prometheus_derive::*;
 
 pub trait SimplePrometheus {

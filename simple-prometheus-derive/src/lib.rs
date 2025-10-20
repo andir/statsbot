@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use proc_macro::TokenStream;
 
 use quote::quote;
