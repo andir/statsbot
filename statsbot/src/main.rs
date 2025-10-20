@@ -128,7 +128,7 @@ async fn message_handler(
             if let (Some(user), Some(password)) =
                 (config.oper_name.clone(), config.oper_password.clone())
             {
-                log::info!("Sending oper command: {} {}", user, password);
+                log::info!("Sending oper command.");
                 client.send_oper(user, password)?;
             }
             *state = State::Idle { next: None };
