@@ -112,6 +112,7 @@ async fn wrapper(sender: tokio::sync::mpsc::Sender<Result<(), Error>>, config: C
 }
 
 enum State {
+    NotConnected,
     Idle { next: Option<usize> },
     WaitingForData { lines: Vec<String>, server: usize },
 }
@@ -122,7 +123,7 @@ async fn run(config: Configuration) -> Result<(), Error> {
 
     let mut s = client.stream()?;
 
-    let mut timer = tokio::time::interval(std::time::Duration::from_secs(15));
+    let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
 
     let mut state = State::Idle { next: None };
     let msg_handler = async |state: &mut State, message: Message| -> Result<(), Error> {
@@ -134,6 +135,7 @@ async fn run(config: Configuration) -> Result<(), Error> {
                     log::info!("Sending oper command: {} {}", user, password);
                     client.send_oper(user, password)?;
                 }
+                *state = State::Idle { next: None };
             }
             Command::Response(irc::proto::Response::RPL_ENDOFSTATS, _) => {
                 if let State::WaitingForData { lines, server } = state {
@@ -149,7 +151,16 @@ async fn run(config: Configuration) -> Result<(), Error> {
                         log::error!("Server name for {} gone missing?!", server);
                         return Ok(());
                     };
-                    log::info!("parsed: {}: {:?}", server_name, parsed_stats);
+                    if let Ok(parsed_stats) = parsed_stats {
+                        log::info!("parsed: {}: {:?}", server_name, parsed_stats);
+                        use simple_prometheus::SimplePrometheus;
+                        log::info!(
+                            "prometheus metrics: {}",
+                            parsed_stats
+                                .to_prometheus_metrics(config.servers.get(server).cloned())
+                                .unwrap_or("".into())
+                        );
+                    }
                 }
             }
             ref c @ Command::Raw(ref code, ref parts) if code == "249" => match state {
@@ -208,6 +219,7 @@ async fn run(config: Configuration) -> Result<(), Error> {
 			    };
 			}
 		    }
+		    _ => {}
 		}
 	    }
         }

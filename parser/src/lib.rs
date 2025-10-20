@@ -3,8 +3,9 @@ use serde::Serialize;
 
 use nom::error::ParseError;
 use nom::{IResult, Parser, bytes::complete::tag, sequence::delimited};
+use simple_prometheus::SimplePrometheus;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, SimplePrometheus)]
 pub struct StatsZ {
     //"Users 10175(1221000) Invites 0(0)"
     users: usize,
@@ -411,6 +412,8 @@ mod tests {
     // "TOTAL: 7377222"
     // ]
 
+    use simple_prometheus::SimplePrometheus;
+
     #[test]
     fn test_parse_statsz() {
         let lines = vec![
@@ -435,6 +438,11 @@ mod tests {
         let line = lines.join("\n");
         let r = super::parse_stats_z(&line).unwrap();
         assert_eq!(r.total, 7377222);
+
+        println!(
+            "{}",
+            r.to_prometheus_metrics(Some("foobar".into())).unwrap()
+        );
     }
 
     #[test]

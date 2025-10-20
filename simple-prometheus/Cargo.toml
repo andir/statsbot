@@ -1,0 +1,12 @@
+[package]
+name = "simple-prometheus"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+
+[dependencies]
+simple-prometheus-derive = { workspace = true }
+
+[lints]
+workspace = true

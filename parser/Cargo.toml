@@ -7,6 +7,7 @@ edition = "2024"
 nom-language = "0.1"
 nom = { version = "8" }
 serde = { workspace = true }
+simple-prometheus = { workspace = true }
 
 
 [lints]

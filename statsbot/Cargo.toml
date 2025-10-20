@@ -15,6 +15,7 @@ futures = { version = "0.3" }
 env_logger = "0.11"
 log = "0.4"
 parser = { workspace = true }
+simple-prometheus= { workspace = true }
 
 [lints]
 workspace = true

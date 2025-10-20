@@ -1,0 +1,15 @@
+[package]
+name = "simple-prometheus-derive"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"
+syn = "2"
+prometheus = { version = "0.14", default-features = false, features = [] }
+
+[lints]
+workspace = true

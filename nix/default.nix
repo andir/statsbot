@@ -17,7 +17,13 @@ let
           }:
           {
             # see https://github.com/andir/rust-analyzer-reproducer/
-            patches = patches ++ [ ./rust-analyzer.patch ];
+            patches = patches ++ [
+              #   ./rust-analyzer.patch
+              (pkgs.fetchpatch {
+                url = "https://patch-diff.githubusercontent.com/raw/rust-lang/rust-analyzer/pull/20866.patch";
+                hash = "sha256-gza1XTKbRJPDRyROCEjrZ0loCmR/WbDsYdin7zTiF6g=";
+              })
+            ];
           }
         );
       })
