@@ -101,11 +101,11 @@ impl Run {
 
         let mut metrics_service = metrics::MetricsService::default();
         let (metrics_tx, metrics_rx) = tokio::sync::mpsc::channel(10);
-        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
 
         let exporter_address = config.exporter_address.clone();
         let r_tx = restart_tx.clone();
-        let service_process = tokio::spawn(async move {
+        let _service_process = tokio::spawn(async move {
             let res = metrics_service
                 .run(exporter_address, metrics_rx, shutdown_rx)
                 .await

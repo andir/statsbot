@@ -1,9 +1,5 @@
-use futures::{future::BoxFuture, lock};
-use http_body_util::{Full, combinators};
-use hyper::{
-    Request, Response,
-    body::{Bytes, Incoming},
-};
+use futures::future::BoxFuture;
+use hyper::{Request, Response, body::Incoming};
 use std::sync::Arc;
 use thiserror::Error as ThisError;
 use tokio::net::ToSocketAddrs;
@@ -27,7 +23,7 @@ type MetricsStore = Arc<tokio::sync::Mutex<std::collections::HashMap<String, par
 pub fn make_handler(
     registry: MetricsStore,
 ) -> impl Fn(Request<Incoming>) -> BoxFuture<'static, tokio::io::Result<Response<String>>> {
-    move |request: Request<Incoming>| {
+    move |_request: Request<Incoming>| {
         let reg = registry.clone();
         Box::pin(async move {
             let reg = reg.lock().await;
