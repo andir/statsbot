@@ -33,25 +33,28 @@ pub fn simple_prometheus_derive(input: TokenStream) -> TokenStream {
         let prefix = format!("{}{}", prefix, field_name);
         let format_label = format!("{}{} {}", prefix, "{{server=\"{}\"}}", "{}");
         let format = format!("{} {}", prefix, "{}");
+
+        #[rustfmt::skip]
         quote! {
-             if let Some(ref server) = server {
-         writeln!(out, #format_label, server, self.#field_name)?;
+            if let Some(ref server) = server {
+		writeln!(out, #format_label, server, self.#field_name)?;
             } else {
-         writeln!(out, #format, self.#field_name)?;
+		writeln!(out, #format, self.#field_name)?;
             }
         }
     });
 
+    #[rustfmt::skip]
     let code = quote! {
-    impl simple_prometheus::SimplePrometheus for #name {
-        fn to_prometheus_metrics(&self, server: Option<String>) -> Result<String, core::fmt::Error> {
-        use std::fmt::Write;
-        let mut out = String::new();
-        #( #write_statements )*
+	impl simple_prometheus::SimplePrometheus for #name {
+	    fn to_prometheus_metrics(&self, server: Option<String>) -> Result<String, core::fmt::Error> {
+		use std::fmt::Write;
+		let mut out = String::new();
+		#( #write_statements )*
 
-        Ok(out)
-        }
-    }
+		Ok(out)
+	    }
+	}
     };
     //println!("{}", code.to_string());
     code.into()
