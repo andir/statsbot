@@ -31,7 +31,7 @@ pub fn simple_prometheus_derive(input: TokenStream) -> TokenStream {
 
     let write_statements = field_names.map(|field_name| {
         let prefix = format!("{}{}", prefix, field_name);
-        let format_label = format!("{}{} {}", prefix, "{{server={}}}", "{}");
+        let format_label = format!("{}{} {}", prefix, "{{server=\"{}\"}}", "{}");
         let format = format!("{} {}", prefix, "{}");
         quote! {
              if let Some(ref server) = server {
