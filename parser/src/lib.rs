@@ -5,7 +5,7 @@ use nom::error::ParseError;
 use nom::{IResult, Parser, bytes::complete::tag, sequence::delimited};
 use simple_prometheus::SimplePrometheus;
 
-#[derive(Debug, Serialize, Default, SimplePrometheus)]
+#[derive(Debug, Serialize, Default, SimplePrometheus, Clone)]
 pub struct StatsZ {
     //"Users 10175(1221000) Invites 0(0)"
     users: usize,

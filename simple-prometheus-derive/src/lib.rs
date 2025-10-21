@@ -4,10 +4,6 @@ use quote::quote;
 
 use syn::{Data, DeriveInput, Fields, Lit, Meta, MetaNameValue, parse_macro_input};
 
-//pub trait SimplePrometheus {
-//    fn to_prometheus_metrics(&self, server: Option<String>) -> Result<String, core::fmt::Error>;
-//}
-
 #[proc_macro_derive(SimplePrometheus, attributes(prefix))]
 pub fn simple_prometheus_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
@@ -46,14 +42,6 @@ pub fn simple_prometheus_derive(input: TokenStream) -> TokenStream {
         }
     });
 
-    //let write_statements = write_statements.collect::<Vec<_>>();
-    //println!(
-    //    "write_statements: {:?}",
-    //    write_statements
-    //        .iter()
-    //        .map(|t| t.to_string())
-    //        .collect::<Vec<_>>()
-    //);
     let code = quote! {
     impl simple_prometheus::SimplePrometheus for #name {
         fn to_prometheus_metrics(&self, server: Option<String>) -> Result<String, core::fmt::Error> {
@@ -101,7 +89,6 @@ fn get_prefix(attrs: &[syn::Attribute]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
     fn test_simple() {}
 }
